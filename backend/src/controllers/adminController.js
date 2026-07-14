@@ -20,7 +20,7 @@ export const getAdminOverview = async (_req, res, next) => {
 
 export const createMovieAdmin = async (req, res, next) => {
   try {
-    const movie = await Movie.create({ ...req.body, createdBy: req.user._id });
+    const movie = await Movie.create({ ...req.body, createdBy: req.user._id, status: 'approved' });
     res.status(201).json({ success: true, movie });
   } catch (error) {
     next(error);

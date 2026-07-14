@@ -7,18 +7,18 @@ const AdminDashboard = () => {
   const [genreForm, setGenreForm] = useState({ name: '', description: '' });
   const [reports, setReports] = useState([]);
 
+  const fetchOverview = async () => {
+    const token = localStorage.getItem('token');
+    const [overviewRes, reportsRes] = await Promise.all([
+      axios.get('/api/admin/overview', { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get('/api/reports', { headers: { Authorization: `Bearer ${token}` } }),
+    ]);
+
+    setOverview(overviewRes.data.overview || { users: 0, movies: 0, reviews: 0, genres: 0 });
+    setReports(reportsRes.data.reports || []);
+  };
+
   useEffect(() => {
-    const fetchOverview = async () => {
-      const token = localStorage.getItem('token');
-      const [overviewRes, reportsRes] = await Promise.all([
-        axios.get('/api/admin/overview', { headers: { Authorization: `Bearer ${token}` } }),
-        axios.get('/api/reports', { headers: { Authorization: `Bearer ${token}` } }),
-      ]);
-
-      setOverview(overviewRes.data.overview || { users: 0, movies: 0, reviews: 0, genres: 0 });
-      setReports(reportsRes.data.reports || []);
-    };
-
     fetchOverview();
   }, []);
 
@@ -27,6 +27,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem('token');
     await axios.post('/api/admin/movies', movieForm, { headers: { Authorization: `Bearer ${token}` } });
     setMovieForm({ title: '', description: '', director: '', language: '', country: '', duration: '' });
+    fetchOverview(); // Refresh overview
   };
 
   const handleGenreSubmit = async (e) => {
@@ -34,6 +35,7 @@ const AdminDashboard = () => {
     const token = localStorage.getItem('token');
     await axios.post('/api/admin/genres', genreForm, { headers: { Authorization: `Bearer ${token}` } });
     setGenreForm({ name: '', description: '' });
+    fetchOverview(); // Refresh overview
   };
 
   const handleDeleteReport = async (id) => {

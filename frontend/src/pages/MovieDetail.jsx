@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { FiHeart } from 'react-icons/fi';
 import ReviewForm from '../components/ReviewForm';
 import CommentForm from '../components/CommentForm';
 import CommentList from '../components/CommentList';
 import RatingForm from '../components/RatingForm';
 import ReportButton from '../components/ReportButton';
+import { useAuth } from '../context/AuthContext';
 
 const MovieDetail = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [activeReviewId, setActiveReviewId] = useState(null);
@@ -28,6 +31,26 @@ const MovieDetail = () => {
     fetchMovie();
     fetchReviews();
   }, [id]);
+
+  const handleLike = async (reviewId) => {
+    if (!user) return; // Or show a message to login
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/likes/reviews/${reviewId}/like`, {}, { headers: { Authorization: `Bearer ${token}` } });
+
+      setReviews((prevReviews) =>
+        prevReviews.map((review) => {
+          if (review._id === reviewId) {
+            const isLiked = review.likes.includes(user._id);
+            return { ...review, likes: isLiked ? review.likes.filter((id) => id !== user._id) : [...review.likes, user._id] };
+          }
+          return review;
+        })
+      );
+    } catch (error) {
+      console.error('Failed to like review', error);
+    }
+  };
 
   if (!movie) return <div className="text-slate-400">Loading...</div>;
 
@@ -69,15 +92,25 @@ const MovieDetail = () => {
                   <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">★ {review.rating}/10</div>
                 </div>
                 <div className="mt-4 space-y-4">
-                  <ReportButton reviewId={review._id} onReportSuccess={() => {}} />
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => handleLike(review._id)}
+                      className={`flex items-center gap-2 rounded border px-3 py-2 text-sm hover:bg-slate-800 ${
+                        user && review.likes.includes(user._id)
+                          ? 'border-rose-500 text-rose-400'
+                          : 'border-slate-700 text-slate-300'
+                      }`}
+                    >
+                      <FiHeart className={`${user && review.likes.includes(user._id) ? 'fill-current' : ''}`} />
+                      <span>{review.likes.length}</span>
+                    </button>
+                    <ReportButton reviewId={review._id} onReportSuccess={() => {}} />
+                  </div>
                   <button
                     className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                    onClick={() => {
-                      setActiveReviewId(review._id);
-                      setCommentRefresh((prev) => prev + 1);
-                    }}
+                    onClick={() => setActiveReviewId(activeReviewId === review._id ? null : review._id)}
                   >
-                    Show comments
+                    {activeReviewId === review._id ? 'Hide' : 'Show'} comments
                   </button>
                   {activeReviewId === review._id && (
                     <div className="space-y-4">
