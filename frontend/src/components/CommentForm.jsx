@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const CommentForm = ({ reviewId }) => {
+const CommentForm = ({ reviewId, parentId = null, onCommentAdded, isReply = false }) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -21,12 +21,12 @@ const CommentForm = ({ reviewId }) => {
     try {
       await axios.post(
         '/api/comments',
-        { review: reviewId, text },
+        { review: reviewId, text, parent: parentId },
         { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }
       );
       setText('');
       setError('');
-      // onCommentAdded?.(); // No longer needed, CommentList will re-fetch
+      onCommentAdded?.();
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to post comment');
     }
@@ -34,17 +34,17 @@ const CommentForm = ({ reviewId }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-      <h4 className="text-sm font-semibold text-white">Add a comment</h4>
+      {!isReply && <h4 className="text-sm font-semibold text-white">Add a comment</h4>}
       {error && <p className="text-sm text-amber-400">{error}</p>}
       <textarea
         className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-        rows={3}
-        placeholder="Share your thoughts..."
+        rows={isReply ? 2 : 3}
+        placeholder={isReply ? "Write a reply..." : "Share your thoughts..."}
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <button className="rounded bg-amber-500 px-4 py-2 font-semibold text-slate-950" type="submit">
-        Post Comment
+      <button className="rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950" type="submit">
+        {isReply ? 'Post Reply' : 'Post Comment'}
       </button>
     </form>
   );

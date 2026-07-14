@@ -211,7 +211,6 @@ const MovieDetail = () => {
                   {activeReviewId === review._id && (
                     <div className="space-y-4">
                       <CommentList reviewId={review._id} />
-                      <CommentForm reviewId={review._id} />
                     </div>
                   )}
                 </div>
