@@ -1,5 +1,15 @@
 import Notification from '../models/Notification.js';
 
+export const createNotification = async (userId, message, link) => {
+  try {
+    if (userId) {
+      await Notification.create({ user: userId, message, link });
+    }
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+};
+
 export const getNotifications = async (req, res, next) => {
   try {
     const notifications = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 });
@@ -9,15 +19,19 @@ export const getNotifications = async (req, res, next) => {
   }
 };
 
-export const markNotificationRead = async (req, res, next) => {
+export const markNotificationAsRead = async (req, res, next) => {
   try {
-    const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
-      { read: true },
-      { new: true }
-    );
-    if (!notification) return res.status(404).json({ success: false, message: 'Notification not found' });
-    res.json({ success: true, notification });
+    await Notification.findByIdAndUpdate(req.params.id, { read: true });
+    res.json({ success: true, message: 'Notification marked as read' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getUnreadCount = async (req, res, next) => {
+  try {
+    const count = await Notification.countDocuments({ user: req.user._id, read: false });
+    res.json({ success: true, count });
   } catch (error) {
     next(error);
   }

@@ -1,9 +1,30 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiFilm, FiUser, FiLogIn, FiLogOut, FiBell } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user) return;
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/notifications/unread-count', { headers: { Authorization: `Bearer ${token}` } });
+        setUnreadCount(response.data.count);
+      } catch (error) {
+        console.error('Failed to fetch unread count', error);
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <nav className="border-b border-slate-800 bg-slate-950/90 backdrop-blur">
@@ -13,8 +34,14 @@ const Navbar = () => {
         </Link>
         <div className="flex items-center gap-4 text-sm text-slate-300">
           <Link to="/movies" className="hover:text-white">Movies</Link>
-          <Link to="/profile" className="hover:text-white">Profile</Link>
-          {user && <Link to="/notifications" className="hover:text-white">Notifications</Link>}
+          {user && <Link to="/submit-movie" className="hover:text-white">Submit Movie</Link>}
+          {user && <Link to="/profile" className="hover:text-white">Profile</Link>}
+          {user && (
+            <Link to="/notifications" className="relative hover:text-white">
+              <FiBell />
+              {unreadCount > 0 && <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-xs text-white">{unreadCount}</span>}
+            </Link>
+          )}
           {user?.role === 'admin' && <Link to="/admin" className="hover:text-white">Admin</Link>}
           {user ? (
             <button onClick={logout} className="flex items-center gap-1 rounded border border-slate-700 px-3 py-2 hover:bg-slate-800">

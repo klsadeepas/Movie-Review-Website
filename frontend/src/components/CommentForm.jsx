@@ -2,7 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const CommentForm = ({ reviewId, onCommentAdded }) => {
+const CommentForm = ({ reviewId }) => {
   const { user } = useAuth();
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +26,7 @@ const CommentForm = ({ reviewId, onCommentAdded }) => {
       );
       setText('');
       setError('');
-      onCommentAdded?.();
+      // onCommentAdded?.(); // No longer needed, CommentList will re-fetch
     } catch (err) {
       setError(err.response?.data?.message || 'Unable to post comment');
     }

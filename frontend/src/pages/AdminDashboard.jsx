@@ -8,6 +8,7 @@ const AdminDashboard = () => {
   const [genreForm, setGenreForm] = useState({ name: '', description: '' });
   const [reports, setReports] = useState([]);
   const [users, setUsers] = useState([]);
+  const [pendingMovies, setPendingMovies] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [userPage, setUserPage] = useState(1);
   const [chartData, setChartData] = useState(null);
@@ -40,11 +41,25 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchPendingMovies = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.get('/api/admin/movies/pending', { headers: { Authorization: `Bearer ${token}` } });
+      setPendingMovies(res.data.movies || []);
+    } catch (error) {
+      console.error('Failed to fetch pending movies', error);
+    }
+  };
+
   useEffect(() => {
     fetchOverview();
   }, []);
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers();
+    if (activeTab === 'users') {
+      fetchUsers();
+    } else if (activeTab === 'approvals') {
+      fetchPendingMovies();
+    }
   }, [activeTab, userPage]);
 
   const handleMovieSubmit = async (e) => {
@@ -91,12 +106,23 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleMovieStatusUpdate = async (movieId, status) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.put(`/api/admin/movies/${movieId}/status`, { status }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchPendingMovies(); // Refresh the list
+    } catch (error) {
+      console.error(`Failed to ${status} movie`, error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="border-b border-slate-800">
         <nav className="-mb-px flex space-x-6">
           <button onClick={() => setActiveTab('overview')} className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${activeTab === 'overview' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>Overview</button>
           <button onClick={() => setActiveTab('users')} className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${activeTab === 'users' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>Manage Users</button>
+          <button onClick={() => setActiveTab('approvals')} className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${activeTab === 'approvals' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>Movie Approvals</button>
         </nav>
       </div>
 
@@ -212,6 +238,32 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {activeTab === 'approvals' && (
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
+          <h2 className="text-2xl font-semibold text-white">Pending Movie Approvals</h2>
+          {pendingMovies.length === 0 ? (
+            <p className="mt-4 text-slate-400">No movies are currently awaiting approval.</p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {pendingMovies.map((movie) => (
+                <div key={movie._id} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4">
+                  <h3 className="font-semibold text-white">{movie.title}</h3>
+                  <p className="text-sm text-slate-400">Submitted by: {movie.createdBy?.name || 'N/A'}</p>
+                  <p className="mt-2 text-sm text-slate-300">{movie.description}</p>
+                  <div className="mt-4 flex gap-4">
+                    <button onClick={() => handleMovieStatusUpdate(movie._id, 'approved')} className="rounded bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">
+                      Approve
+                    </button>
+                    <button onClick={() => handleMovieStatusUpdate(movie._id, 'rejected')} className="rounded bg-rose-500 px-4 py-2 text-sm font-semibold text-white">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

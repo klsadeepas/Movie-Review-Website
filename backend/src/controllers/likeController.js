@@ -1,4 +1,5 @@
 import Review from '../models/Review.js';
+import { createNotification } from './notificationController.js';
 
 export const toggleLike = async (req, res, next) => {
   try {
@@ -16,6 +17,11 @@ export const toggleLike = async (req, res, next) => {
       review.likes.splice(likeIndex, 1); // Unlike
     } else {
       review.likes.push(userId); // Like
+      // Don't notify user for their own action
+      if (review.user.toString() !== userId.toString()) {
+        const message = `${req.user.name} liked your review: "${review.title}"`;
+        createNotification(review.user, message, `/movies/${review.movie}`);
+      }
     }
 
     await review.save();

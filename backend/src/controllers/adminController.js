@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Movie from '../models/Movie.js';
 import Review from '../models/Review.js';
 import Genre from '../models/Genre.js';
+import { createNotification } from './notificationController.js';
 
 export const getAdminOverview = async (_req, res, next) => {
   try {
@@ -122,6 +123,35 @@ export const deleteUserAdmin = async (req, res, next) => {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPendingMoviesAdmin = async (_req, res, next) => {
+  try {
+    const movies = await Movie.find({ status: 'pending' }).populate('createdBy', 'name');
+    res.json({ success: true, movies });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateMovieStatusAdmin = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const movie = await Movie.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+    if (!movie) return res.status(404).json({ success: false, message: 'Movie not found' });
+
+    // Notify the user who submitted the movie
+    const message = `Your movie submission "${movie.title}" has been ${status}.`;
+    createNotification(movie.createdBy, message, `/movies/${movie._id}`);
+
+    res.json({ success: true, movie });
   } catch (error) {
     next(error);
   }

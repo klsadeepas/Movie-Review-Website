@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-const CommentList = ({ reviewId, refreshKey }) => {
+const CommentList = ({ reviewId }) => {
   const [comments, setComments] = useState([]);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ const CommentList = ({ reviewId, refreshKey }) => {
     };
 
     if (reviewId) fetchComments();
-  }, [reviewId, refreshKey]);
+  }, [reviewId]);
 
   return (
     <div className="space-y-3">

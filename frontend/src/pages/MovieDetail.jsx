@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { FiHeart, FiBookmark, FiStar } from 'react-icons/fi';
@@ -15,18 +15,46 @@ const MovieDetail = () => {
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [activeReviewId, setActiveReviewId] = useState(null);
-  const [commentRefresh, setCommentRefresh] = useState(0);
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   const [isInFavorites, setIsInFavorites] = useState(false);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewTotalPages, setReviewTotalPages] = useState(1);
+  const [loadingMoreReviews, setLoadingMoreReviews] = useState(false);
+
+  // Ref for the last review element to observe for infinite scroll
+  const observer = useRef();
+  const lastReviewElementRef = useCallback(node => {
+    if (loadingMoreReviews) return;
+    if (observer.current) observer.current.disconnect();
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && reviewPage < reviewTotalPages) {
+        setReviewPage(prevPage => prevPage + 1);
+      }
+    });
+    if (node) observer.current.observe(node);
+  }, [loadingMoreReviews, reviewPage, reviewTotalPages]);
 
   const fetchMovie = async () => {
     const response = await axios.get(`/api/movies/${id}`);
     setMovie(response.data.movie);
   };
 
-  const fetchReviews = async () => {
-    const response = await axios.get(`/api/reviews?movie=${id}`);
-    setReviews(response.data.reviews || []);
+  const fetchReviews = async (pageNumber = 1) => {
+    setLoadingMoreReviews(true);
+    try {
+      const response = await axios.get(`/api/reviews?movie=${id}&page=${pageNumber}&limit=5`); // Fetch 5 reviews at a time
+      if (pageNumber === 1) {
+        setReviews(response.data.reviews || []);
+      } else {
+        setReviews(prevReviews => [...prevReviews, ...(response.data.reviews || [])]);
+      }
+      setReviewTotalPages(response.data.totalPages || 1);
+      setReviewPage(response.data.currentPage || 1);
+    } catch (error) {
+      console.error('Failed to fetch reviews', error);
+    } finally {
+      setLoadingMoreReviews(false);
+    }
   };
 
   const checkUserLists = async () => {
@@ -46,12 +74,18 @@ const MovieDetail = () => {
 
   useEffect(() => {
     fetchMovie();
-    fetchReviews();
+    fetchReviews(1); // Fetch initial reviews
   }, [id]);
 
   useEffect(() => {
     checkUserLists();
   }, [id, user]);
+
+  useEffect(() => {
+    if (reviewPage > 1) {
+      fetchReviews(reviewPage);
+    }
+  }, [reviewPage]);
 
   const handleLike = async (reviewId) => {
     if (!user) return; // Or show a message to login
@@ -137,7 +171,7 @@ const MovieDetail = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]" id="reviews-section">
         <div className="space-y-6">
           <ReviewForm movieId={id} onReviewAdded={() => fetchReviews()} />
           {reviews.length === 0 ? (
@@ -145,7 +179,7 @@ const MovieDetail = () => {
           ) : (
             reviews.map((review) => (
               <div key={review._id} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
-                <div className="flex flex-wrap items-center justify-between gap-4">
+                <div ref={reviews.length === index + 1 ? lastReviewElementRef : null} className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <h3 className="text-xl font-semibold text-white">{review.title}</h3>
                     <p className="mt-2 text-slate-400">{review.review}</p>
@@ -176,14 +210,15 @@ const MovieDetail = () => {
                   </button>
                   {activeReviewId === review._id && (
                     <div className="space-y-4">
-                      <CommentList reviewId={review._id} refreshKey={commentRefresh} />
-                      <CommentForm reviewId={review._id} onCommentAdded={() => setCommentRefresh((prev) => prev + 1)} />
+                      <CommentList reviewId={review._id} />
+                      <CommentForm reviewId={review._id} />
                     </div>
                   )}
                 </div>
               </div>
             ))
           )}
+          {loadingMoreReviews && <div className="text-center text-slate-400">Loading more reviews...</div>}
         </div>
 
         <RatingForm movieId={id} onRated={() => fetchMovie()} />

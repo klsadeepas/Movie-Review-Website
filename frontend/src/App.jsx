@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import Home from './pages/Home';
 import Movies from './pages/Movies';
 import MovieDetail from './pages/MovieDetail';
@@ -6,6 +7,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import SubmitMovie from './pages/SubmitMovie';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
@@ -25,12 +27,16 @@ function App() {
           <Route path="/movies/:id" element={<MovieDetail />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/notifications" element={<Notifications />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/verify/:token" element={<VerifyEmail />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/submit-movie" element={<SubmitMovie />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
