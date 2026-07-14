@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FiFilm, FiUser, FiLogIn, FiLogOut } from 'react-icons/fi';
+import { FiFilm, FiUser, FiLogIn, FiLogOut, FiBell } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
@@ -14,7 +14,8 @@ const Navbar = () => {
         <div className="flex items-center gap-4 text-sm text-slate-300">
           <Link to="/movies" className="hover:text-white">Movies</Link>
           <Link to="/profile" className="hover:text-white">Profile</Link>
-          <Link to="/admin" className="hover:text-white">Admin</Link>
+          {user && <Link to="/notifications" className="hover:text-white">Notifications</Link>}
+          {user?.role === 'admin' && <Link to="/admin" className="hover:text-white">Admin</Link>}
           {user ? (
             <button onClick={logout} className="flex items-center gap-1 rounded border border-slate-700 px-3 py-2 hover:bg-slate-800">
               <FiLogOut /> Logout

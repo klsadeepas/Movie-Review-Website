@@ -25,7 +25,10 @@ const Login = () => {
         <input className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3" placeholder="Password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
         <button className="w-full rounded bg-amber-500 px-4 py-3 font-semibold text-slate-950" type="submit">Login</button>
       </form>
-      <p className="mt-4 text-sm text-slate-400">Need an account? <Link className="text-amber-400" to="/register">Register</Link></p>
+      <div className="mt-4 flex flex-col gap-2 text-sm text-slate-400">
+        <Link className="text-amber-400 hover:text-amber-200" to="/forgot-password">Forgot password?</Link>
+        <p>Need an account? <Link className="text-amber-400 hover:text-amber-200" to="/register">Register</Link></p>
+      </div>
     </div>
   );
 };

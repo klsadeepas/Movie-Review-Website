@@ -2,11 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import ReviewForm from '../components/ReviewForm';
+import CommentForm from '../components/CommentForm';
+import CommentList from '../components/CommentList';
+import RatingForm from '../components/RatingForm';
+import ReportButton from '../components/ReportButton';
 
 const MovieDetail = () => {
   const { id } = useParams();
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const [activeReviewId, setActiveReviewId] = useState(null);
+  const [commentRefresh, setCommentRefresh] = useState(0);
 
   const fetchMovie = async () => {
     const response = await axios.get(`/api/movies/${id}`);
@@ -14,8 +20,8 @@ const MovieDetail = () => {
   };
 
   const fetchReviews = async () => {
-    const response = await axios.get('/api/reviews');
-    setReviews(response.data.reviews.filter((review) => review.movie?._id === id || review.movie === id));
+    const response = await axios.get(`/api/reviews?movie=${id}`);
+    setReviews(response.data.reviews || []);
   };
 
   useEffect(() => {
@@ -35,7 +41,7 @@ const MovieDetail = () => {
               <h1 className="text-3xl font-semibold text-white">{movie.title}</h1>
               <p className="text-slate-400">{movie.director} • {movie.language}</p>
             </div>
-            <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">⭐ {movie.ratingAverage || 8.4}</div>
+            <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">⭐ {movie.ratingAverage || 0}</div>
           </div>
           <p className="text-slate-300">{movie.description}</p>
           <div className="flex flex-wrap gap-2">
@@ -46,26 +52,46 @@ const MovieDetail = () => {
         </div>
       </div>
 
-      <ReviewForm movieId={id} onReviewAdded={() => fetchReviews()} />
-
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-white">Recent Reviews</h2>
-        <div className="space-y-4">
+      <div className="grid gap-6 lg:grid-cols-[1.2fr,0.8fr]">
+        <div className="space-y-6">
+          <ReviewForm movieId={id} onReviewAdded={() => fetchReviews()} />
           {reviews.length === 0 ? (
-            <p className="text-slate-400">No reviews yet. Be the first to write one.</p>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">No reviews yet. Be the first to write one.</div>
           ) : (
             reviews.map((review) => (
-              <div key={review._id} className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-white">{review.title}</h3>
-                  <span className="text-amber-400">★ {review.rating}/10</span>
+              <div key={review._id} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-white">{review.title}</h3>
+                    <p className="mt-2 text-slate-400">{review.review}</p>
+                    <p className="mt-3 text-xs uppercase tracking-[0.25em] text-slate-500">By {review.user?.name || 'Anonymous'}</p>
+                  </div>
+                  <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">★ {review.rating}/10</div>
                 </div>
-                <p className="mt-2 text-sm text-slate-400">{review.review}</p>
-                <p className="mt-3 text-xs uppercase tracking-[0.25em] text-slate-500">By {review.user?.name || 'Anonymous'}</p>
+                <div className="mt-4 space-y-4">
+                  <ReportButton reviewId={review._id} onReportSuccess={() => {}} />
+                  <button
+                    className="rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                    onClick={() => {
+                      setActiveReviewId(review._id);
+                      setCommentRefresh((prev) => prev + 1);
+                    }}
+                  >
+                    Show comments
+                  </button>
+                  {activeReviewId === review._id && (
+                    <div className="space-y-4">
+                      <CommentList reviewId={review._id} refreshKey={commentRefresh} />
+                      <CommentForm reviewId={review._id} onCommentAdded={() => setCommentRefresh((prev) => prev + 1)} />
+                    </div>
+                  )}
+                </div>
               </div>
             ))
           )}
         </div>
+
+        <RatingForm movieId={id} onRated={() => fetchMovie()} />
       </div>
     </div>
   );
