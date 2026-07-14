@@ -7,6 +7,7 @@ import CommentForm from '../components/CommentForm';
 import CommentList from '../components/CommentList';
 import RatingForm from '../components/RatingForm';
 import ReportButton from '../components/ReportButton';
+import MovieDetailSkeleton from '../components/MovieDetailSkeleton';
 import { useAuth } from '../context/AuthContext';
 
 const MovieDetail = () => {
@@ -20,6 +21,7 @@ const MovieDetail = () => {
   const [reviewPage, setReviewPage] = useState(1);
   const [reviewTotalPages, setReviewTotalPages] = useState(1);
   const [loadingMoreReviews, setLoadingMoreReviews] = useState(false);
+  const [loadingMovie, setLoadingMovie] = useState(true);
 
   // Ref for the last review element to observe for infinite scroll
   const observer = useRef();
@@ -35,8 +37,14 @@ const MovieDetail = () => {
   }, [loadingMoreReviews, reviewPage, reviewTotalPages]);
 
   const fetchMovie = async () => {
-    const response = await axios.get(`/api/movies/${id}`);
-    setMovie(response.data.movie);
+    setLoadingMovie(true);
+    try {
+      const response = await axios.get(`/api/movies/${id}`);
+      setMovie(response.data.movie);
+    } catch (error) {
+      console.error('Failed to fetch movie', error);
+    }
+    setLoadingMovie(false);
   };
 
   const fetchReviews = async (pageNumber = 1) => {
@@ -125,11 +133,12 @@ const MovieDetail = () => {
     }
   };
 
-  if (!movie) return <div className="text-slate-400">Loading...</div>;
+  if (loadingMovie) return <MovieDetailSkeleton />;
+  if (!movie) return <div className="text-center text-slate-500 dark:text-slate-400">Movie not found.</div>;
 
   return (
     <div className="space-y-8">
-      <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <img src={movie.banner || movie.poster} alt={movie.title} className="h-80 w-full object-cover" />
         <div className="space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">

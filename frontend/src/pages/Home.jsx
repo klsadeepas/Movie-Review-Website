@@ -2,21 +2,42 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import MovieCard from '../components/MovieCard';
+import MovieCardSkeleton from '../components/MovieCardSkeleton';
 
 const Home = () => {
   const [movies, setMovies] = useState([]);
+  const [trendingMovies, setTrendingMovies] = useState([]);
+  const [loadingLatest, setLoadingLatest] = useState(true);
+  const [loadingTrending, setLoadingTrending] = useState(true);
 
   useEffect(() => {
     const fetchMovies = async () => {
+      setLoadingLatest(true);
       try {
-        const response = await axios.get('/api/movies');
+        // Fetch only a few movies for the homepage
+        const response = await axios.get('/api/movies?limit=6');
         setMovies(response.data.movies || []);
       } catch (error) {
         console.error(error);
+      } finally {
+        setLoadingLatest(false);
+      }
+    };
+
+    const fetchTrendingMovies = async () => {
+      setLoadingTrending(true);
+      try {
+        const response = await axios.get('/api/movies/trending');
+        setTrendingMovies(response.data.movies || []);
+      } catch (error) {
+        console.error('Failed to fetch trending movies', error);
+      } finally {
+        setLoadingTrending(false);
       }
     };
 
     fetchMovies();
+    fetchTrendingMovies();
   }, []);
 
   return (
@@ -57,9 +78,26 @@ const Home = () => {
           <Link to="/movies" className="text-sm text-amber-400">View all</Link>
         </div>
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {movies.slice(0, 6).map((movie) => (
-            <MovieCard key={movie._id} movie={movie} />
-          ))}
+          {loadingLatest
+            ? Array.from({ length: 6 }).map((_, index) => <MovieCardSkeleton key={index} />)
+            : movies.map((movie) => (
+                <MovieCard key={movie._id} movie={movie} />
+              ))
+          }
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Trending This Week</h2>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {loadingTrending
+            ? Array.from({ length: 6 }).map((_, index) => <MovieCardSkeleton key={index} />)
+            : trendingMovies.map((movie) => (
+                <MovieCard key={movie._id} movie={movie} />
+              ))
+          }
         </div>
       </section>
     </div>
