@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { FiHeart } from 'react-icons/fi';
+import { FiHeart, FiBookmark, FiStar } from 'react-icons/fi';
 import ReviewForm from '../components/ReviewForm';
 import CommentForm from '../components/CommentForm';
 import CommentList from '../components/CommentList';
@@ -16,6 +16,8 @@ const MovieDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [activeReviewId, setActiveReviewId] = useState(null);
   const [commentRefresh, setCommentRefresh] = useState(0);
+  const [isInWatchlist, setIsInWatchlist] = useState(false);
+  const [isInFavorites, setIsInFavorites] = useState(false);
 
   const fetchMovie = async () => {
     const response = await axios.get(`/api/movies/${id}`);
@@ -27,10 +29,29 @@ const MovieDetail = () => {
     setReviews(response.data.reviews || []);
   };
 
+  const checkUserLists = async () => {
+    if (!user) return;
+    const token = localStorage.getItem('token');
+    try {
+      const [watchlistRes, favoritesRes] = await Promise.all([
+        axios.get('/api/watchlist', { headers: { Authorization: `Bearer ${token}` } }),
+        axios.get('/api/favorites', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      setIsInWatchlist(watchlistRes.data.items.some((item) => item.movie._id === id));
+      setIsInFavorites(favoritesRes.data.items.some((item) => item.movie._id === id));
+    } catch (error) {
+      console.error('Failed to fetch user lists', error);
+    }
+  };
+
   useEffect(() => {
     fetchMovie();
     fetchReviews();
   }, [id]);
+
+  useEffect(() => {
+    checkUserLists();
+  }, [id, user]);
 
   const handleLike = async (reviewId) => {
     if (!user) return; // Or show a message to login
@@ -52,6 +73,24 @@ const MovieDetail = () => {
     }
   };
 
+  const toggleListItem = async (listType) => {
+    if (!user) return;
+    const token = localStorage.getItem('token');
+    const endpoint = listType === 'watchlist' ? '/api/watchlist' : '/api/favorites';
+    const setter = listType === 'watchlist' ? setIsInWatchlist : setIsInFavorites;
+
+    try {
+      // Optimistic update
+      setter((prev) => !prev);
+      await axios.post(endpoint, { movieId: id }, { headers: { Authorization: `Bearer ${token}` } });
+      // No need to re-fetch, the state is already updated.
+      // For more robustness, you could re-fetch on success or revert on error.
+    } catch (error) {
+      console.error(`Failed to toggle ${listType}`, error);
+      setter((prev) => !prev); // Revert on error
+    }
+  };
+
   if (!movie) return <div className="text-slate-400">Loading...</div>;
 
   return (
@@ -64,7 +103,30 @@ const MovieDetail = () => {
               <h1 className="text-3xl font-semibold text-white">{movie.title}</h1>
               <p className="text-slate-400">{movie.director} • {movie.language}</p>
             </div>
-            <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">⭐ {movie.ratingAverage || 0}</div>
+            <div className="flex items-center gap-2">
+              {user && (
+                <>
+                  <button
+                    onClick={() => toggleListItem('watchlist')}
+                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-slate-800 ${isInWatchlist ? 'border-sky-500 text-sky-400' : 'border-slate-700 text-slate-300'}`}
+                  >
+                    <FiBookmark className={isInWatchlist ? 'fill-current' : ''} />
+                    <span>{isInWatchlist ? 'In Watchlist' : 'Watchlist'}</span>
+                  </button>
+                  <button
+                    onClick={() => toggleListItem('favorites')}
+                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm hover:bg-slate-800 ${isInFavorites ? 'border-amber-500 text-amber-400' : 'border-slate-700 text-slate-300'}`}
+                  >
+                    <FiStar className={isInFavorites ? 'fill-current' : ''} />
+                    <span>{isInFavorites ? 'Favorited' : 'Favorite'}</span>
+                  </button>
+                </>
+              )}
+              <div className="rounded-full bg-amber-500/20 px-3 py-2 text-amber-400">
+                <span className="text-base">⭐</span>
+                <span className="ml-1 font-semibold">{movie.ratingAverage || 0}</span>
+              </div>
+            </div>
           </div>
           <p className="text-slate-300">{movie.description}</p>
           <div className="flex flex-wrap gap-2">

@@ -89,3 +89,40 @@ export const createGenreAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getUsersAdmin = async (req, res, next) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const users = await User.find()
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await User.countDocuments();
+    res.json({ success: true, users, totalPages: Math.ceil(total / limit), currentPage: Number(page) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateUserAdmin = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    const user = await User.findByIdAndUpdate(req.params.id, { role }, { new: true, runValidators: true }).select('-password');
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUserAdmin = async (req, res, next) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};

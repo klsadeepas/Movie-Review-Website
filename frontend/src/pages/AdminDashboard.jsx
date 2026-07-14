@@ -7,6 +7,9 @@ const AdminDashboard = () => {
   const [movieForm, setMovieForm] = useState({ title: '', description: '', director: '', language: '', country: '', duration: '' });
   const [genreForm, setGenreForm] = useState({ name: '', description: '' });
   const [reports, setReports] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [userPage, setUserPage] = useState(1);
   const [chartData, setChartData] = useState(null);
 
   const fetchOverview = async () => {
@@ -27,9 +30,22 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchUsers = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await axios.get(`/api/admin/users?page=${userPage}`, { headers: { Authorization: `Bearer ${token}` } });
+      setUsers(res.data.users || []);
+    } catch (error) {
+      console.error('Failed to fetch users', error);
+    }
+  };
+
   useEffect(() => {
     fetchOverview();
   }, []);
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers();
+  }, [activeTab, userPage]);
 
   const handleMovieSubmit = async (e) => {
     e.preventDefault();
@@ -53,8 +69,38 @@ const AdminDashboard = () => {
     setReports((prev) => prev.filter((report) => report._id !== id));
   };
 
+  const handleRoleChange = async (userId, role) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.put(`/api/admin/users/${userId}`, { role }, { headers: { Authorization: `Bearer ${token}` } });
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to update role', error);
+    }
+  };
+
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      const token = localStorage.getItem('token');
+      try {
+        await axios.delete(`/api/admin/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } });
+        fetchUsers();
+      } catch (error) {
+        console.error('Failed to delete user', error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
+      <div className="border-b border-slate-800">
+        <nav className="-mb-px flex space-x-6">
+          <button onClick={() => setActiveTab('overview')} className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${activeTab === 'overview' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>Overview</button>
+          <button onClick={() => setActiveTab('users')} className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${activeTab === 'users' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>Manage Users</button>
+        </nav>
+      </div>
+
+      {activeTab === 'overview' && (<>
       <div className="grid gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
           <p className="text-sm text-slate-400">Total Users</p>
@@ -128,6 +174,44 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+      </>)}
+
+      {activeTab === 'users' && (
+        <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
+          <h2 className="text-2xl font-semibold text-white">Manage Users</h2>
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-700">
+              <thead className="bg-slate-950">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-400">Role</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-slate-400">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {users.map((user) => (
+                  <tr key={user._id}>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-white">{user.name}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-300">{user.email}</td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-300">
+                      <select value={user.role} onChange={(e) => handleRoleChange(user._id, e.target.value)} className="rounded border-slate-700 bg-slate-950 text-sm text-white">
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <button onClick={() => handleDeleteUser(user._id)} className="text-rose-400 hover:text-rose-300">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Add pagination controls here if needed */}
+        </div>
+      )}
+
     </div>
   );
 };
