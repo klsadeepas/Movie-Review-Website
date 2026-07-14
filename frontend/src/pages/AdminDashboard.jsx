@@ -1,21 +1,30 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import LineChart from '../components/LineChart';
 
 const AdminDashboard = () => {
   const [overview, setOverview] = useState({ users: 0, movies: 0, reviews: 0, genres: 0 });
   const [movieForm, setMovieForm] = useState({ title: '', description: '', director: '', language: '', country: '', duration: '' });
   const [genreForm, setGenreForm] = useState({ name: '', description: '' });
   const [reports, setReports] = useState([]);
+  const [chartData, setChartData] = useState(null);
 
   const fetchOverview = async () => {
     const token = localStorage.getItem('token');
-    const [overviewRes, reportsRes] = await Promise.all([
+    const [overviewRes, reportsRes, chartRes] = await Promise.all([
       axios.get('/api/admin/overview', { headers: { Authorization: `Bearer ${token}` } }),
       axios.get('/api/reports', { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get('/api/admin/charts', { headers: { Authorization: `Bearer ${token}` } }),
     ]);
 
     setOverview(overviewRes.data.overview || { users: 0, movies: 0, reviews: 0, genres: 0 });
     setReports(reportsRes.data.reports || []);
+    if (chartRes.data.chartData) {
+      setChartData({
+        users: { labels: chartRes.data.chartData.labels, datasets: [{ label: 'New Users', data: chartRes.data.chartData.users, borderColor: 'rgb(59, 130, 246)', backgroundColor: 'rgba(59, 130, 246, 0.5)' }] },
+        movies: { labels: chartRes.data.chartData.labels, datasets: [{ label: 'New Movies', data: chartRes.data.chartData.movies, borderColor: 'rgb(234, 179, 8)', backgroundColor: 'rgba(234, 179, 8, 0.5)' }] },
+      });
+    }
   };
 
   useEffect(() => {
@@ -64,6 +73,13 @@ const AdminDashboard = () => {
           <p className="text-3xl font-semibold text-white">{overview.genres}</p>
         </div>
       </div>
+
+      {chartData && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <LineChart chartData={chartData.users} title="Monthly User Registrations" />
+          <LineChart chartData={chartData.movies} title="Monthly Movies Added" />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <form onSubmit={handleMovieSubmit} className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8">

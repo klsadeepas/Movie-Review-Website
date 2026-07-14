@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [profileForm, setProfileForm] = useState({ name: '', bio: '', country: '' });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
@@ -12,6 +12,7 @@ const Profile = () => {
   const [watchlist, setWatchlist] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [avatarFile, setAvatarFile] = useState(null);
 
   useEffect(() => {
     const loadLists = async () => {
@@ -36,8 +37,10 @@ const Profile = () => {
     setMessage('');
     try {
       const token = localStorage.getItem('token');
-      await axios.put('/api/users/profile', profileForm, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await axios.put('/api/users/profile', profileForm, { headers: { Authorization: `Bearer ${token}` } });
       setMessage('Profile updated successfully!');
+      // Update user in context
+      setUser(response.data.user);
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to update profile.');
     }
@@ -53,6 +56,24 @@ const Profile = () => {
       setPasswordForm({ currentPassword: '', newPassword: '' });
     } catch (error) {
       setMessage(error.response?.data?.message || 'Failed to change password.');
+    }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    e.preventDefault();
+    if (!avatarFile) return;
+
+    const formData = new FormData();
+    formData.append('avatar', avatarFile);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put('/api/users/avatar', formData, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'multipart/form-data' } });
+      setMessage('Avatar updated successfully!');
+      setUser(response.data.user);
+      setAvatarFile(null);
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Failed to upload avatar.');
     }
   };
 
@@ -81,15 +102,25 @@ const Profile = () => {
       </div>
 
       <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
-        {message && <p className="mb-4 rounded-lg bg-slate-800 p-3 text-center text-sm text-amber-400">{message}</p>}
+        {message && <p className="mb-6 rounded-lg bg-slate-800 p-3 text-center text-sm text-amber-400">{message}</p>}
 
         {activeTab === 'profile' && (
-          <form onSubmit={handleProfileUpdate} className="space-y-4">
-            <input className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
-            <textarea className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Bio" value={profileForm.bio} onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })} />
-            <input className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Country" value={profileForm.country} onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })} />
-            <button className="rounded bg-amber-500 px-4 py-2 font-semibold text-slate-950" type="submit">Save Changes</button>
-          </form>
+          <div className="space-y-6">
+            <form onSubmit={handleAvatarUpload} className="flex items-center gap-4">
+              <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files[0])} className="text-sm text-slate-400 file:mr-4 file:rounded-full file:border-0 file:bg-amber-500/20 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-amber-400 hover:file:bg-amber-500/30" />
+              {avatarFile && <button className="rounded bg-amber-500 px-4 py-2 text-sm font-semibold text-slate-950" type="submit">Upload</button>}
+            </form>
+            <hr className="border-slate-800" />
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-400">Name</label>
+                <input className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Name" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} />
+              </div>
+              <textarea className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Bio" value={profileForm.bio} onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })} />
+              <input className="w-full rounded border border-slate-700 bg-slate-950 px-4 py-3 text-white" placeholder="Country" value={profileForm.country} onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })} />
+              <button className="rounded bg-amber-500 px-4 py-2 font-semibold text-slate-950" type="submit">Save Changes</button>
+            </form>
+          </div>
         )}
 
         {activeTab === 'password' && (
