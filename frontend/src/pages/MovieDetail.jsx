@@ -186,8 +186,8 @@ const MovieDetail = () => {
           {reviews.length === 0 ? (
             <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">No reviews yet. Be the first to write one.</div>
           ) : (
-            reviews.map((review) => (
-              <div key={review._id} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
+            reviews.map((review, index) => (
+              <div key={review._id} ref={reviews.length === index + 1 ? lastReviewElementRef : null} className="rounded-2xl border border-slate-800 bg-slate-950/80 p-6">
                 <div ref={reviews.length === index + 1 ? lastReviewElementRef : null} className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <h3 className="text-xl font-semibold text-white">{review.title}</h3>
